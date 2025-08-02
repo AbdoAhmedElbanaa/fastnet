@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <title>FastNet | طباعة المستخدمين</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/fonts/inter/inter.css" id="main-font-link" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/fonts/tabler-icons.min.css" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/fonts/feather.css" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/fonts/material.css" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/css/style.css" id="main-style-link" />
+    <link rel="stylesheet" href="https://cdn.elbana.net/assets/css/style-preset.css" />
+    <script src="https://cdn.elbana.net/assets/js/plugins/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Custom styles for printing */
+        @page {
+            size: A4; /* Default page size */
+            margin: 1cm;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                page-break-after: always;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjust as needed */
+                gap: 10px;
+                padding: 10px;
+            }
+            .user-card-print {
+                border: 1px solid #ccc;
+                padding: 10px;
+                margin: 5px;
+                text-align: center;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+            }
+        }
+
+        /* General styles for the page */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+        }
+        .pc-container {
+            padding: 20px;
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 15px 20px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #666;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--pcolor);
+            border-bottom-color: var(--pcolor);
+            background-color: transparent;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #555;
+        }
+        .btn-primary {
+            border-color: var(--pcolor);
+        }
+        .btn-primary:hover {
+            background-color: var(--pcolor-dark);
+            border-color: var(--pcolor-dark);
+        }
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+            border-color: #138496;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #c82333;
+        }
+        .user-card-preview {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fff;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .user-card-preview .qr-code {
+            margin: 10px auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 5px;
+            width: fit-content;
+        }
+        .user-card-preview h6 {
+            margin-bottom: 5px;
+            color: var(--pcolor);
+        }
+        .user-card-preview p {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Dark mode adjustments */
+        body.dark-mode {
+            background-color: var(--dark-body);
+            color: var(--icdark);
+        }
+        body.dark-mode .card {
+            background-color: var(--idark);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        body.dark-mode .card-header {
+            background-color: var(--idark);
+            border-bottom-color: #444;
+        }
+        body.dark-mode .nav-tabs .nav-link {
+            color: var(--icdark);
+        }
+        body.dark-mode .nav-tabs .nav-link.active {
+            color: var(--pcolor);
+            border-bottom-color: var(--pcolor);
+        }
+        body.dark-mode .form-label {
+            color: var(--icdark);
+        }
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: var(--dark-input-bg);
+            border-color: var(--dark-input-border);
+            color: var(--icdark);
+        }
+        body.dark-mode .user-card-preview {
+            background-color: var(--dark-card-bg);
+            border-color: var(--dark-card-border);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+        }
+        body.dark-mode .user-card-preview h6 {
+            color: var(--pcolor);
+        }
+        body.dark-mode .user-card-preview p {
+            color: var(--icdark);
+        }
+        body.dark-mode .user-card-preview .qr-code {
+            border-color: #555;
+        }
+
+        /* Print Layouts */
+        .card-design-preview {
+            border: 1px dashed #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            overflow: hidden; /* Ensure content stays within */
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            position: relative; /* For positioning edit/delete buttons */
+        }
+        .card-design-preview.selected {
+            border: 2px solid var(--pcolor);
+            background-color: #e6f7ff;
+        }
+        .card-design-preview:hover {
+            cursor: pointer;
+            background-color: #f0f0f0;
+        }
+        body.dark-mode .card-design-preview {
+            background-color: #333;
+            border-color: #555;
+        }
+        body.dark-mode .card-design-preview.selected {
+            border-color: var(--pcolor);
+            background-color: #2a3a4a;
+        }
+        body.dark-mode .card-design-preview:hover {
+            background-color: #444;
+        }
+
+        /* Package/Card Selection Cards */
+        .package-card-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+        }
+        .package-card-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .package-card-item.selected {
+            border-color: var(--pcolor);
+            box-shadow: 0 0 0 3px rgba(var(--pcolor-rgb), 0.3);
+            background-color: #e6f7ff; /* Light blue background for selected */
+        }
+        body.dark-mode .package-card-item {
+            background-color: var(--idark);
+            border-color: #444;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        body.dark-mode .package-card-item.selected {
+            border-color: var(--pcolor);
+            background-color: #2a3a4a;
+        }
+        .package-card-item h6 {
+            margin-bottom: 5px;
+            color: var(--pcolor);
+        }
+        .package-card-item p {
+            font-size: 0.9em;
+            color: #555;
+        }
+        body.dark-mode .package-card-item h6 {
+            color: var(--pcolor);
+        }
+        body.dark-mode .package-card-item p {
+            color: var(--icdark);
+        }
+
+        .design-actions {
+    position: absolute;
+    top: 5px;
+    left: 20px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+}
+        .design-actions .btn-icon {
+            padding: 5px;
+            font-size: 0.8em;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader-bg">
+        <div class="loader-track">
+            <div class="loader-fill"></div>
+        </div>
+    </div>
+    <nav class="pc-sidebar no-print">
+        <div class="navbar-wrapper">
+            <div class="m-header mx-5">
+                <a href="dashboard.html" class="b-brand text-primary">
+                    <img src="https://cdn.elbana.net/assets/images/logo.png" class="img-fluid" alt="logo">
+                </a>
+            </div>
+            <div class="navbar-content">
+                <div class="card pc-user-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <img src="https://cdn.elbana.net/assets/images/user/avatar-1.jpg" alt="user-image"
+                                    class="user-avtar wid-45 rounded-circle"></div>
+                            <div class="flex-grow-1 ms-3 me-2">
+                                <h6 class="mb-0" id="username"></h6>
+                            </div>
+                            <a class="btn btn-icon btn-link-secondary avtar" data-bs-toggle="collapse"
+                                href="#pc_sidebar_userlink">
+                                <svg class="pc-icon">
+                                    <use xlink:href="#custom-sort-outline"></use>
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="collapse pc-user-links" id="pc_sidebar_userlink">
+                            <div class="pt-3">
+                                <a href="#!" id="logoutButton">
+                                    <i class="ti ti-power"></i>
+                                    <span>تسجيل الخروج</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul class="pc-navbar">
+                    <li class="pc-item pc-caption"><label data-i18n="Navigation">التنقل</label></li>
+                    <li class="pc-item">
+                        <a href="dashboard.html" class="pc-link">
+                            <span class="pc-micon"><i class="ti ti-dashboard"></i></span>
+                            <span class="pc-mtext">لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li class="pc-item">
+                        <a href="print-users.html" class="pc-link active">
+                            <span class="pc-micon"><i class="ti ti-printer"></i></span>
+                            <span class="pc-mtext">طباعة المستخدمين</span>
+                        </a>
+                    </li>
+                    <!-- Add other navigation links as needed, similar to dashboard.html -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <header class="pc-header no-print">
+        <div class="header-wrapper">
+            <div class="me-auto pc-mob-drp">
+                <ul class="list-unstyled">
+                    <li class="pc-h-item pc-sidebar-collapse"><a href="#" class="pc-head-link ms-0"
+                            id="sidebar-hide"><i class="ti ti-menu-2"></i></a></li>
+                    <li class="pc-h-item pc-sidebar-popup"><a href="#" class="pc-head-link ms-0"
+                            id="mobile-collapse"><i class="ti ti-menu-2"></i></a></li>
+                </ul>
+            </div>
+            <div class="ms-auto">
+                <ul class="list-unstyled">
+                    <li class="dropdown pc-h-item"><a class="pc-head-link dropdown-toggle arrow-none me-0"
+                            data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false"
+                            aria-expanded="false"><svg class="pc-icon">
+                                <use xlink:href="#custom-sun-1"></use>
+                            </svg></a>
+                        <div class="dropdown-menu dropdown-menu-end pc-h-dropdown"><a href="#!" class="dropdown-item"
+                                onclick="layout_change('dark')"><svg class="pc-icon">
+                                    <use xlink:href="#custom-moon"></use>
+                                </svg> <span>Dark</span> </a><a href="#!" class="dropdown-item"
+                                onclick="layout_change('light')"><svg class="pc-icon">
+                                    <use xlink:href="#custom-sun-1"></use>
+                                </svg> <span>Light</span> </a><a href="#!" class="dropdown-item"
+                                onclick="layout_change_default()"><svg class="pc-icon">
+                                    <use xlink:href="#custom-setting-2"></use>
+                                </svg> <span>Default</span></a></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <div class="pc-container">
+        <div class="pc-content">
+            <div class="row no-print">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>طباعة المستخدمين</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Tabs for Packages and Cards -->
+                            <ul class="nav nav-tabs mb-3" id="packageCardTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="home-packages-tab" data-bs-toggle="tab" data-bs-target="#homePackagesTabContent" type="button" role="tab" aria-controls="homePackagesTabContent" aria-selected="true">باقات منزلية</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="card-packages-tab" data-bs-toggle="tab" data-bs-target="#cardPackagesTabContent" type="button" role="tab" aria-controls="cardPackagesTabContent" aria-selected="false">باقات كروت</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="packageCardTabsContent">
+                                <!-- Home Packages Tab Content -->
+                                <div class="tab-pane fade show active" id="homePackagesTabContent" role="tabpanel" aria-labelledby="home-packages-tab">
+                                    <h6 class="mb-3">اختر باقة منزلية</h6>
+                                    <div class="row" id="homePackagesCardsList">
+                                        <!-- Home package cards will be loaded here -->
+                                    </div>
+                                    <div id="noHomePackagesMessage" class="alert alert-info text-center mt-3" style="display: none;">
+                                        لا توجد باقات منزلية متاحة.
+                                    </div>
+                                </div>
+                                <!-- Card Packages Tab Content -->
+                                <div class="tab-pane fade" id="cardPackagesTabContent" role="tabpanel" aria-labelledby="card-packages-tab">
+                                    <h6 class="mb-3">اختر باقة كروت</h6>
+                                    <div class="row" id="cardPackagesCardsList">
+                                        <!-- Card package cards will be loaded here -->
+                                    </div>
+                                    <div id="noCardPackagesMessage" class="alert alert-info text-center mt-3" style="display: none;">
+                                        لا توجد باقات كروت متاحة.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Printing Options -->
+                            <h5 class="mt-4">خيارات الطباعة</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="pageSize" class="form-label">حجم صفحة الطباعة</label>
+                                    <select class="form-select" id="pageSize">
+                                        <option value="A4">A4</option>
+                                        <option value="Letter">Letter</option>
+                                        <option value="Legal">Legal</option>
+                                        <option value="A3">A3</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="usersPerPage" class="form-label">عدد المستخدمين في الصفحة الواحدة</label>
+                                    <input type="number" class="form-control" id="usersPerPage" value="10" min="1">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="printContentOption" class="form-label">محتوى الطباعة</label>
+                                <select class="form-select" id="printContentOption">
+                                    <option value="username_only">طباعة اسم المستخدم فقط</option>
+                                    <option value="username_password">طباعة اسم المستخدم وكلمة المرور</option>
+                                    <option value="username_qr">طباعة اسم المستخدم فقط (QR)</option>
+                                    <option value="username_password_qr">طباعة اسم المستخدم وكلمة المرور (QR)</option>
+                                </select>
+                            </div>
+
+                            <hr>
+
+                            <!-- Card Design Selection -->
+                            <h5 class="mt-4">اختيار شكل الكارت</h5>
+                            <div class="mb-3">
+                                <button class="btn btn-primary btn-sm me-2" id="addCustomDesignManualBtn">إضافة تصميم يدوي (HTML)</button>
+                                <button class="btn btn-info btn-sm" id="uploadCustomDesignBtn">رفع تصميم من ملف (HTML)</button>
+                            </div>
+                            <div class="row" id="cardDesignsList">
+                                <!-- Default and custom designs will be loaded here -->
+                            </div>
+
+                            <hr>
+
+                            <div class="d-flex justify-content-end mt-4">
+                                <button class="btn btn-success me-2" id="generatePrintPreviewBtn">إنشاء معاينة الطباعة</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Preview and Export Section -->
+            <div class="row mt-4 no-print" id="printOutputSection" style="display: none;">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>معاينة الطباعة</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="printPreviewContainer" style="border: 1px dashed #ccc; padding: 15px; min-height: 300px; overflow-y: auto;">
+                                <!-- Generated user cards will appear here -->
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-info me-2" id="exportPdfBtn">تصدير PDF</button>
+                                <button class="btn btn-warning me-2" id="exportHtmlBtn">تصدير HTML</button>
+                                <button class="btn btn-primary" id="directPrintBtn">طباعة مباشر</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for Custom HTML Design -->
+            <div class="modal fade" id="customDesignModal" tabindex="-1" aria-labelledby="customDesignModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="customDesignModalLabel">إضافة تصميم HTML مخصص</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="customDesignName" class="form-label">اسم التصميم</label>
+                                <input type="text" class="form-control" id="customDesignName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="customDesignHtml" class="form-label">كود HTML للتصميم</label>
+                                <textarea class="form-control" id="customDesignHtml" rows="10" placeholder="أدخل كود HTML هنا. استخدم [USERNAME], [PASSWORD], [QR_CODE] كعناصر نائبة." required></textarea>
+                            </div>
+                            <div class="alert alert-info mt-3">
+                                <strong>ملاحظة:</strong> استخدم العناصر النائبة التالية في كود HTML الخاص بك:
+                                <ul>
+                                    <li><code>[USERNAME]</code>: لاسم المستخدم</li>
+                                    <li><code>[PASSWORD]</code>: لكلمة المرور</li>
+                                    <li><code>[QR_CODE]</code>: لرمز الاستجابة السريعة (QR Code)</li>
+                                </ul>
+                                يجب أن يكون التصميم الخاص بك متجاوبًا (responsive) ليعمل بشكل جيد مع أحجام الطباعة المختلفة.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-primary" id="saveCustomDesignBtn">حفظ التصميم</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="pc-footer no-print">
+    </footer>
+
+    <script src="https://cdn.elbana.net/assets/js/plugins/popper.min.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/plugins/simplebar.min.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/plugins/bootstrap.min.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/pcoded.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/theme.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/plugins/feather.min.js"></script>
+    <script src="https://cdn.elbana.net/assets/js/icon/custom-font.js"></script>
+    <script>layout_change('light');</script>
+    <script>change_box_container('false');</script>
+    <script>layout_caption_change('true');</script>
+    <script>layout_rtl_change('true');</script>
+    <script>preset_change('preset-1');</script>
+    <script>main_layout_change('vertical');</script>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+        import { getDatabase, ref, onValue, get, push, set, update, remove } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js';
+
+        // Firebase config (replace with your actual config from dashboard.html or a global variable)
+        const firebaseConfig = {
+            apiKey: 'AIzaSyD1ec40EhTrqr5e_oTv9uSnohWRVfWA6LM',
+            authDomain: 'fastspeeddash.firebaseapp.com',
+            projectId: 'fastspeeddash',
+            databaseURL: 'https://fastspeeddash-default-rtdb.firebaseio.com',
+            storageBucket: 'fastspeeddash.firebasestorage.app',
+            messagingSenderId: '604447249768',
+            appId: '1:604447249768:web:0ad8e8e327093893cb72dd'
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const dbRT = getDatabase(app);
+
+        let currentUserUid = null;
+        let homePackages = [];
+        let cardPackages = [];
+        let availableUsers = [];
+        let customCardDesigns = []; // To store user-added custom designs
+        let selectedPackageId = null; // To store the ID of the currently selected package card
+        let editingDesignId = null; // To store the ID of the design being edited
+
+        const usernameDisplay = document.getElementById('username');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // Removed select elements
+        const homePackagesCardsList = document.getElementById('homePackagesCardsList');
+        const cardPackagesCardsList = document.getElementById('cardPackagesCardsList');
+        const noHomePackagesMessage = document.getElementById('noHomePackagesMessage');
+        const noCardPackagesMessage = document.getElementById('noCardPackagesMessage');
+
+        const pageSizeSelect = document.getElementById('pageSize');
+        const usersPerPageInput = document.getElementById('usersPerPage');
+        const printContentOptionSelect = document.getElementById('printContentOption');
+        const generatePrintPreviewBtn = document.getElementById('generatePrintPreviewBtn');
+        const printPreviewContainer = document.getElementById('printPreviewContainer');
+        const printOutputSection = document.getElementById('printOutputSection');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+        const directPrintBtn = document.getElementById('directPrintBtn');
+        const cardDesignsList = document.getElementById('cardDesignsList');
+        const addCustomDesignManualBtn = document.getElementById('addCustomDesignManualBtn'); // New button for manual input
+        const uploadCustomDesignBtn = document.getElementById('uploadCustomDesignBtn'); // New button for file upload
+        const customDesignModal = new bootstrap.Modal(document.getElementById('customDesignModal'));
+        const saveCustomDesignBtn = document.getElementById('saveCustomDesignBtn');
+        const customDesignNameInput = document.getElementById('customDesignName');
+        const customDesignHtmlInput = document.getElementById('customDesignHtml');
+
+        // Default card designs
+        const defaultCardDesigns = [
+            {
+                id: 'default1',
+                name: 'تصميم افتراضي 1',
+                html: `
+                    <div style="border: 1px solid #ccc; padding: 10px; margin: 5px; text-align: center; font-family: sans-serif; box-sizing: border-box; width: 100%;">
+                        <h4 style="margin-bottom: 5px; color: #333;">FastNet Card</h4>
+                        <p style="margin: 0;">اسم المستخدم: <strong>[USERNAME]</strong></p>
+                        <p style="margin: 0;">كلمة المرور: <strong>[PASSWORD]</strong></p>
+                        <div class="qr-code" style="margin-top: 10px; display: inline-block;">[QR_CODE]</div>
+                    </div>
+                `
+            },
+            {
+                id: 'default2',
+                name: 'تصميم افتراضي 2',
+                html: `
+                    <div style="border: 2px dashed #007bff; padding: 15px; margin: 5px; text-align: center; background-color: #e9f7ff; font-family: sans-serif; box-sizing: border-box; width: 100%;">
+                        <h3 style="color: #007bff; margin-bottom: 10px;">FastNet Access</h3>
+                        <p style="font-size: 1.1em; margin: 5px 0;">المستخدم: <span style="font-weight: bold;">[USERNAME]</span></p>
+                        <p style="font-size: 1.1em; margin: 5px 0;">المرور: <span style="font-weight: bold;">[PASSWORD]</span></p>
+                        <div class="qr-code" style="margin-top: 15px; display: inline-block;">[QR_CODE]</div>
+                        <p style="font-size: 0.8em; color: #666; margin-top: 10px;">شكراً لاختياركم FastNet</p>
+                    </div>
+                `
+            }
+        ];
+
+        let selectedDesign = defaultCardDesigns[0].html; // Initially select the first default design
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserUid = user.uid;
+                console.log('User logged in:', currentUserUid);
+                const userRef = ref(dbRT, 'users/' + currentUserUid);
+                onValue(userRef, (snapshot) => {
+                    const userData = snapshot.val();
+                    if (userData) {
+                        usernameDisplay.textContent = userData.username || 'المستخدم';
+                    } else {
+                        usernameDisplay.textContent = 'المستخدم';
+                    }
+                });
+                loadPackages();
+                loadAvailableUsers();
+                loadCustomDesigns(); // Load custom designs from Firebase
+            } else {
+                console.log('User not logged in. Redirecting to login.');
+                sessionStorage.removeItem('loggedInUser');
+                showAlert('success', 'تم تسجيل الخروج', 'تم تسجيل خروجك بنجاح.');
+                window.location.href = 'index.html';
+            }
+            const loaderBg = document.querySelector('.loader-bg');
+            if (loaderBg) {
+                loaderBg.classList.add('d-none');
+            }
+        });
+
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log('User signed out.');
+            } catch (error) {
+                console.error('Error signing out:', error);
+                showAlert('error', 'خطأ', 'فشل تسجيل الخروج. يرجى المحاولة مرة أخرى.');
+            }
+        });
+
+        function showAlert(type, title, text) {
+            const customClass = {
+                popup: 'swal2-dark-mode-popup',
+                title: 'swal2-dark-mode-title',
+                content: 'swal2-dark-mode-content'
+            };
+            Swal.fire({
+                icon: type,
+                title: title,
+                text: text,
+                customClass: customClass
+            });
+        }
+
+        function loadPackages() {
+            const homePackagesRef = ref(dbRT, 'users/' + currentUserUid + '/homePackages');
+            onValue(homePackagesRef, (snapshot) => {
+                homePackages = [];
+                homePackagesCardsList.innerHTML = ''; // Clear existing cards
+                if (!snapshot.exists()) {
+                    noHomePackagesMessage.style.display = 'block';
+                    return;
+                } else {
+                    noHomePackagesMessage.style.display = 'none';
+                }
+                snapshot.forEach((childSnapshot) => {
+                    const pkg = childSnapshot.val();
+                    pkg.id = childSnapshot.key;
+                    homePackages.push(pkg);
+                    renderPackageCard(pkg, homePackagesCardsList, 'home');
+                });
+            });
+
+            const cardPackagesRef = ref(dbRT, 'users/' + currentUserUid + '/cardPackages');
+            onValue(cardPackagesRef, (snapshot) => {
+                cardPackages = [];
+                cardPackagesCardsList.innerHTML = ''; // Clear existing cards
+                if (!snapshot.exists()) {
+                    noCardPackagesMessage.style.display = 'block';
+                    return;
+                } else {
+                    noCardPackagesMessage.style.display = 'none';
+                }
+                snapshot.forEach((childSnapshot) => {
+                    const pkg = childSnapshot.val();
+                    pkg.id = childSnapshot.key;
+                    cardPackages.push(pkg);
+                    renderPackageCard(pkg, cardPackagesCardsList, 'card');
+                });
+            });
+        }
+
+        function renderPackageCard(pkg, container, type) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 col-sm-6 mb-3';
+            col.innerHTML = `
+                <div class="package-card-item" data-package-id="${pkg.id}" data-package-type="${type}">
+                    <div class="mb-2">
+                        ${pkg.qouta_icon || (type === 'home' ? '<i class="ti ti-wifi" style="font-size: 36px; color: var(--pcolor);"></i>' : '<i class="ti ti-credit-card" style="font-size: 36px; color: var(--pcolor);"></i>')}
+                    </div>
+                    <h6>${pkg.title_qouta}</h6>
+                    <p>${pkg.price_qouta}</p>
+                    <p style="font-size: 0.8em; color: #888;">${pkg.description_qouta}</p>
+                </div>
+            `;
+            container.appendChild(col);
+
+            col.querySelector('.package-card-item').addEventListener('click', (event) => {
+                // Remove 'selected' from all package cards
+                document.querySelectorAll('.package-card-item').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                // Add 'selected' to the clicked card
+                event.currentTarget.classList.add('selected');
+                selectedPackageId = event.currentTarget.dataset.packageId;
+                console.log('Selected Package ID:', selectedPackageId);
+            });
+        }
+
+        // Handle tab switching to clear selection in other tab
+        document.getElementById('home-packages-tab').addEventListener('shown.bs.tab', () => {
+            document.querySelectorAll('#cardPackagesCardsList .package-card-item').forEach(card => card.classList.remove('selected'));
+            selectedPackageId = null;
+        });
+
+        document.getElementById('card-packages-tab').addEventListener('shown.bs.tab', () => {
+            document.querySelectorAll('#homePackagesCardsList .package-card-item').forEach(card => card.classList.remove('selected'));
+            selectedPackageId = null;
+        });
+
+
+        function loadAvailableUsers() {
+            const usersRef = ref(dbRT, 'users/' + currentUserUid + '/usersAvilabel');
+            onValue(usersRef, (snapshot) => {
+                availableUsers = [];
+                snapshot.forEach((childSnapshot) => {
+                    const user = childSnapshot.val();
+                    user.id = childSnapshot.key;
+                    if (!user.used) { // Only load unused users
+                        availableUsers.push(user);
+                    }
+                });
+            });
+        }
+
+        function loadCustomDesigns() {
+            const customDesignsRef = ref(dbRT, 'users/' + currentUserUid + '/customCardDesigns');
+            onValue(customDesignsRef, (snapshot) => {
+                customCardDesigns = [];
+                snapshot.forEach((childSnapshot) => {
+                    const design = childSnapshot.val();
+                    design.id = childSnapshot.key;
+                    customCardDesigns.push(design);
+                });
+                renderCardDesigns();
+            });
+        }
+
+        function renderCardDesigns() {
+            cardDesignsList.innerHTML = ''; // Clear existing designs
+
+            // Render default designs
+            defaultCardDesigns.forEach(design => {
+                const designElement = createDesignCard(design, false); // Default designs are not editable/deletable
+                cardDesignsList.appendChild(designElement);
+            });
+
+            // Render custom designs
+            customCardDesigns.forEach(design => {
+                const designElement = createDesignCard(design, true); // Custom designs are editable/deletable
+                cardDesignsList.appendChild(designElement);
+            });
+
+            // Add click listeners to select designs
+            document.querySelectorAll('.card-design-preview').forEach(card => {
+                card.addEventListener('click', (event) => {
+                    // Prevent selection when clicking on action buttons
+                    if (event.target.closest('.design-actions')) {
+                        return;
+                    }
+                    document.querySelectorAll('.card-design-preview').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    const designId = card.dataset.designId;
+                    const selected = [...defaultCardDesigns, ...customCardDesigns].find(d => d.id === designId);
+                    if (selected) {
+                        selectedDesign = selected.html;
+                    }
+                });
+            });
+
+            // Ensure the initially selected design is marked
+            const initialSelectedCard = document.querySelector(`[data-design-id="${defaultCardDesigns[0].id}"]`);
+            if (initialSelectedCard) {
+                initialSelectedCard.classList.add('selected');
+            }
+        }
+
+        function createDesignCard(design, showActions) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            col.innerHTML = `
+                <div class="card-design-preview" data-design-id="${design.id}">
+                    ${showActions ? `
+                    <div class="design-actions">
+                        <button class="btn btn-warning btn-icon edit-design-btn" data-id="${design.id}" title="تعديل التصميم">
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-icon delete-design-btn" data-id="${design.id}" title="حذف التصميم">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </div>
+                    ` : ''}
+                    <h6>${design.name}</h6>
+                    <div class="card-preview-content" style="border: 1px solid #ddd; padding: 5px; overflow: hidden; max-height: 100px;">
+                        ${design.html.replace(/\[USERNAME\]/g, 'اسم المستخدم').replace(/\[PASSWORD\]/g, 'كلمة المرور').replace(/\[QR_CODE\]/g, '<div style="width: 30px; height: 30px; background-color: #ccc; display: inline-block; vertical-align: middle;"></div>')}
+                    </div>
+                </div>
+            `;
+            
+            if (showActions) {
+                col.querySelector('.edit-design-btn').addEventListener('click', () => editCustomDesign(design.id));
+                col.querySelector('.delete-design-btn').addEventListener('click', () => deleteCustomDesign(design.id));
+            }
+
+            return col;
+        }
+
+        addCustomDesignManualBtn.addEventListener('click', () => {
+            editingDesignId = null; // Reset editing state
+            customDesignNameInput.value = '';
+            customDesignHtmlInput.value = '';
+            customDesignModal.show();
+        });
+
+        uploadCustomDesignBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.html';
+            fileInput.onchange = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        editingDesignId = null; // Reset editing state
+                        customDesignNameInput.value = file.name.replace(/\.html$/, ''); // Set name from filename
+                        customDesignHtmlInput.value = e.target.result;
+                        customDesignModal.show();
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            fileInput.click();
+        });
+
+
+        saveCustomDesignBtn.addEventListener('click', async () => {
+            const name = customDesignNameInput.value.trim();
+            const html = customDesignHtmlInput.value.trim();
+
+            if (!name || !html) {
+                showAlert('error', 'خطأ', 'يرجى إدخال اسم وتصميم HTML.');
+                return;
+            }
+
+            try {
+                if (editingDesignId) {
+                    // Update existing design
+                    const designRef = ref(dbRT, 'users/' + currentUserUid + '/customCardDesigns/' + editingDesignId);
+                    await update(designRef, { name, html });
+                    showAlert('success', 'نجاح', 'تم تحديث التصميم المخصص بنجاح!');
+                } else {
+                    // Add new design
+                    const newDesignPushRef = push(ref(dbRT, 'users/' + currentUserUid + '/customCardDesigns'));
+                    await set(newDesignPushRef, { name, html });
+                    showAlert('success', 'نجاح', 'تم حفظ التصميم المخصص بنجاح!');
+                }
+                customDesignModal.hide();
+            }
+            catch (error) {
+                console.error('Error saving custom design:', error);
+                showAlert('error', 'خطأ', 'فشل حفظ التصميم المخصص.');
+            }
+        });
+
+        function editCustomDesign(designId) {
+            const designToEdit = customCardDesigns.find(design => design.id === designId);
+            if (designToEdit) {
+                editingDesignId = designId;
+                customDesignNameInput.value = designToEdit.name;
+                customDesignHtmlInput.value = designToEdit.html;
+                customDesignModal.show();
+            } else {
+                showAlert('error', 'خطأ', 'لم يتم العثور على التصميم للتعديل.');
+            }
+        }
+
+        async function deleteCustomDesign(designId) {
+            Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: 'لن تتمكن من التراجع عن هذا! سيتم حذف التصميم المخصص.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'نعم، احذفه!',
+                cancelButtonText: 'إلغاء',
+                customClass: {
+                    popup: 'swal2-dark-mode-popup',
+                    title: 'swal2-dark-mode-title',
+                    content: 'swal2-dark-mode-content'
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await remove(ref(dbRT, 'users/' + currentUserUid + '/customCardDesigns/' + designId));
+                        showAlert('success', 'تم الحذف!', 'تم حذف التصميم المخصص بنجاح.');
+                    } catch (error) {
+                        console.error('Error deleting custom design:', error);
+                        showAlert('error', 'خطأ', 'فشل حذف التصميم المخصص.');
+                    }
+                }
+            });
+        }
+
+
+        generatePrintPreviewBtn.addEventListener('click', () => {
+            const printContentOption = printContentOptionSelect.value;
+
+            let usersToPrint = [];
+
+            if (selectedPackageId) {
+                usersToPrint = availableUsers.filter(user => user.packageId === selectedPackageId);
+            } else {
+                showAlert('warning', 'تحذير', 'الرجاء اختيار باقة منزلية أو باقة كروت لعرض المستخدمين.');
+                return;
+            }
+
+            if (usersToPrint.length === 0) {
+                showAlert('info', 'لا يوجد مستخدمون', 'لا توجد مستخدمين متاحين لهذه الباقة.');
+                printPreviewContainer.innerHTML = '';
+                printOutputSection.style.display = 'none';
+                return;
+            }
+
+            printPreviewContainer.innerHTML = ''; // Clear previous preview
+            printOutputSection.style.display = 'block';
+
+            const usersPerPage = parseInt(usersPerPageInput.value);
+            let pageCounter = 0;
+
+            for (let i = 0; i < usersToPrint.length; i++) {
+                const user = usersToPrint[i];
+                let cardHtml = selectedDesign;
+                let qrData = '';
+
+                // Replace placeholders based on print content option
+                cardHtml = cardHtml.replace(/\[USERNAME\]/g, user.username || '');
+                cardHtml = cardHtml.replace(/\[PASSWORD\]/g, user.password || '');
+
+                if (printContentOption.includes('qr')) {
+                    if (printContentOption === 'username_qr') {
+                        qrData = user.username || '';
+                    } else if (printContentOption === 'username_password_qr') {
+                        qrData = `Username: ${user.username || ''}\nPassword: ${user.password || ''}`;
+                    }
+
+                    const qrCodeSvg = generateQrCodeSvg(qrData, 128); // Generate QR code SVG
+                    cardHtml = cardHtml.replace(/\[QR_CODE\]/g, `<div class="qr-code">${qrCodeSvg}</div>`);
+                } else {
+                    cardHtml = cardHtml.replace(/\[QR_CODE\]/g, ''); // Remove QR placeholder if not needed
+                }
+
+                const userCardDiv = document.createElement('div');
+                userCardDiv.className = 'user-card-print';
+                userCardDiv.innerHTML = cardHtml;
+                printPreviewContainer.appendChild(userCardDiv);
+            }
+
+            // Apply page size to print styles
+            const styleTag = document.createElement('style');
+            styleTag.innerHTML = `@page { size: ${pageSizeSelect.value}; margin: 1cm; }`;
+            document.head.appendChild(styleTag);
+        });
+
+        function generateQrCodeSvg(text, size) {
+            const qr = qrcode(0, 'L'); // Type number 0, error correction level L
+            qr.addData(text);
+            qr.make();
+            return qr.createSvgTag({ cellSize: 2, margin: 0 }); // Adjust cellSize and margin as needed
+        }
+
+        exportPdfBtn.addEventListener('click', async () => {
+            showAlert('info', 'جارٍ التصدير', 'يتم الآن إنشاء ملف PDF. قد يستغرق هذا بعض الوقت...');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: pageSizeSelect.value.toLowerCase()
+            });
+
+            const elements = printPreviewContainer.querySelectorAll('.user-card-print');
+            const usersPerPage = parseInt(usersPerPageInput.value);
+
+            let pageHeight = doc.internal.pageSize.getHeight();
+            let yOffset = 10; // Initial Y offset for content
+
+            for (let i = 0; i < elements.length; i++) {
+                const element = elements[i];
+                const canvas = await html2canvas(element, { scale: 2 }); // Higher scale for better quality
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = doc.internal.pageSize.getWidth() - 20; // 10mm margin on each side
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                if (yOffset + imgHeight > pageHeight - 10 && i !== 0) { // Check if content overflows, and not the very first element
+                    doc.addPage();
+                    yOffset = 10; // Reset Y offset for new page
+                }
+
+                doc.addImage(imgData, 'PNG', 10, yOffset, imgWidth, imgHeight);
+                yOffset += imgHeight + 5; // Add some padding between cards
+            }
+
+            doc.save('users_print.pdf');
+            showAlert('success', 'تم التصدير!', 'تم تصدير ملف PDF بنجاح.');
+        });
+
+        exportHtmlBtn.addEventListener('click', () => {
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="ar">
+                <head>
+                    <title>طباعة المستخدمين</title>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+                        @page { size: ${pageSizeSelect.value}; margin: 1cm; }
+                        .print-container {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjust as needed */
+                            gap: 10px;
+                            padding: 10px;
+                        }
+                        .user-card-print {
+                            border: 1px solid #ccc;
+                            padding: 10px;
+                            margin: 5px;
+                            text-align: center;
+                            box-sizing: border-box;
+                            page-break-inside: avoid;
+                        }
+                        .qr-code svg { width: 100px; height: 100px; } /* Adjust QR code size for print */
+                    </style>
+                </head>
+                <body>
+                    <div class="print-container">
+                        ${printPreviewContainer.innerHTML}
+                    </div>
+                </body>
+                </html>
+            `;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'users_print.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAlert('success', 'تم التصدير!', 'تم تصدير ملف HTML بنجاح.');
+        });
+
+        directPrintBtn.addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar">
+                <head>
+                    <title>طباعة المستخدمين</title>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+                        @page { size: ${pageSizeSelect.value}; margin: 1cm; }
+                        .print-container {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjust as needed */
+                            gap: 10px;
+                            padding: 10px;
+                        }
+                        .user-card-print {
+                            border: 1px solid #ccc;
+                            padding: 10px;
+                            margin: 5px;
+                            text-align: center;
+                            box-sizing: border-box;
+                            page-break-inside: avoid;
+                        }
+                        .qr-code svg { width: 100px; height: 100px; } /* Adjust QR code size for print */
+                    </style>
+                </head>
+                <body>
+                    <div class="print-container">
+                        ${printPreviewContainer.innerHTML}
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
+
+        // Initial setup for sidebar and theme (copied from dashboard.html)
+        document.addEventListener('DOMContentLoaded', () => {
+            const loaderBg = document.querySelector('.loader-bg');
+            if (loaderBg) {
+                loaderBg.classList.add('d-none');
+            }
+        });
+    </script>
+</body>
+</html>
