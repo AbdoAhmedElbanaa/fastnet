@@ -139,7 +139,7 @@
             hideMessage();
 
             // Stop any existing scanner instances
-            if (qrScanner && qrScanner.is  && qrScanner.is ) { // Check if qrScanner is initialized and running
+            if (qrScanner && qrScanner.is  && qrScanner.is ) {
                 try {
                     await qrScanner.stop();
                     qrScanner.clear();
@@ -148,36 +148,72 @@
                 }
             }
 
-            // Attempt to get camera access
             try {
+                // First, request camera permission to ensure we can enumerate devices
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                // If permission is granted, stop the temporary camera stream to avoid conflicts
+                // Stop the temporary stream immediately after getting permission
                 stream.getTracks().forEach(track => track.stop());
+
+                // Enumerate cameras to find the environment camera
+                const cameras = await Html5Qrcode.getCameras();
+                let environmentCameraId = null;
+
+                // Prioritize finding an 'environment' camera
+                for (const camera of cameras) {
+                    // Check if the camera label indicates it's a back camera (common patterns)
+                    // This is heuristic and might vary by device/browser
+                    if (camera.label.toLowerCase().includes('back') || camera.label.toLowerCase().includes('environment')) {
+                        environmentCameraId = camera.id;
+                        break; // Found a suitable back camera, use it
+                    }
+                }
+
+                // If no specific 'environment' camera is identified by label,
+                // try to find one that is not explicitly 'front' or 'user' facing,
+                // or just pick the first one if only one exists.
+                if (!environmentCameraId && cameras.length > 0) {
+                    // Fallback: try to find a camera that isn't explicitly 'front'
+                    const nonFrontCameras = cameras.filter(camera => !camera.label.toLowerCase().includes('front') && !camera.label.toLowerCase().includes('user'));
+                    if (nonFrontCameras.length > 0) {
+                        environmentCameraId = nonFrontCameras[0].id;
+                    } else {
+                        // If all cameras are labeled 'front' or 'user', just pick the first one
+                        environmentCameraId = cameras[0].id;
+                    }
+                }
+
+                if (!environmentCameraId) {
+                    throw new Error("لم يتم العثور على كاميرا خلفية أو أي كاميرا متاحة.");
+                }
 
                 loadingMessage.classList.add('hidden');
                 readerDiv.classList.remove('hidden');
 
+                // Initialize Html5QrcodeScanner with the specific camera ID
                 qrScanner = new Html5QrcodeScanner("reader", {
                     fps: 10,
                     qrbox: { width: 250, height: 250 },
-                    // Use 'environment' for back camera, 'user' for front camera
+                    // videoConstraints are still useful as a fallback or hint,
+                    // but passing cameraId directly to render is more forceful.
                     videoConstraints: {
                         facingMode: "environment",
-                        width: { ideal: 1280 }, // Ideal resolution for better scanning
+                        width: { ideal: 1280 },
                         height: { ideal: 720 }
                     },
-                    rememberLastUsedCamera: true // Remember user's camera choice
-                }, /* verbose= */ false); // Set verbose to false for cleaner console
+                    rememberLastUsedCamera: true
+                }, /* verbose= */ false);
 
+                // Render the scanner with the selected camera ID
                 qrScanner.render(onScanSuccess, onScanFailure);
 
             } catch (error) {
                 loadingMessage.classList.add('hidden');
-                console.error("خطأ في إذن الكاميرا:", error);
-                showMessage(
-                    "تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.",
-                    true
-                );
+                console.error("خطأ في إذن الكاميرا أو الوصول إليها:", error);
+                let errorMessage = "تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.";
+                if (error.message.includes("not found")) {
+                    errorMessage = "لم يتم العثور على كاميرا متاحة. يرجى التأكد من توصيل الكاميرا ومنح الإذن.";
+                }
+                showMessage(errorMessage, true);
             }
         }
 
