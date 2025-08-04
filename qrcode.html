@@ -139,7 +139,7 @@
             hideMessage();
 
             // Stop any existing scanner instances
-            if (qrScanner && qrScanner.is  && qrScanner.is ) {
+            if (qrScanner && qrScanner.is ) { // Check if qrScanner is initialized and running
                 try {
                     await qrScanner.stop();
                     qrScanner.clear();
@@ -150,6 +150,7 @@
 
             try {
                 // First, request camera permission to ensure we can enumerate devices
+                // If permission is already granted, this will resolve immediately without a prompt.
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 // Stop the temporary stream immediately after getting permission
                 stream.getTracks().forEach(track => track.stop());
@@ -158,21 +159,17 @@
                 const cameras = await Html5Qrcode.getCameras();
                 let environmentCameraId = null;
 
-                // Prioritize finding an 'environment' camera
+                // Prioritize finding an 'environment' camera based on common labels
                 for (const camera of cameras) {
-                    // Check if the camera label indicates it's a back camera (common patterns)
-                    // This is heuristic and might vary by device/browser
                     if (camera.label.toLowerCase().includes('back') || camera.label.toLowerCase().includes('environment')) {
                         environmentCameraId = camera.id;
                         break; // Found a suitable back camera, use it
                     }
                 }
 
-                // If no specific 'environment' camera is identified by label,
-                // try to find one that is not explicitly 'front' or 'user' facing,
-                // or just pick the first one if only one exists.
+                // Fallback: If no specific 'environment' camera is identified by label,
+                // try to find one that is not explicitly 'front' or 'user' facing.
                 if (!environmentCameraId && cameras.length > 0) {
-                    // Fallback: try to find a camera that isn't explicitly 'front'
                     const nonFrontCameras = cameras.filter(camera => !camera.label.toLowerCase().includes('front') && !camera.label.toLowerCase().includes('user'));
                     if (nonFrontCameras.length > 0) {
                         environmentCameraId = nonFrontCameras[0].id;
@@ -189,22 +186,20 @@
                 loadingMessage.classList.add('hidden');
                 readerDiv.classList.remove('hidden');
 
-                // Initialize Html5QrcodeScanner with the specific camera ID
+                // Initialize Html5QrcodeScanner
                 qrScanner = new Html5QrcodeScanner("reader", {
                     fps: 10,
                     qrbox: { width: 250, height: 250 },
-                    // videoConstraints are still useful as a fallback or hint,
-                    // but passing cameraId directly to render is more forceful.
                     videoConstraints: {
-                        facingMode: "environment",
+                        facingMode: "environment", // Keep this as a strong hint for the browser
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     },
                     rememberLastUsedCamera: true
                 }, /* verbose= */ false);
 
-                // Render the scanner with the selected camera ID
-                qrScanner.render(onScanSuccess, onScanFailure);
+                // Render the scanner with the selected camera ID directly
+                qrScanner.render(environmentCameraId, onScanSuccess, onScanFailure);
 
             } catch (error) {
                 loadingMessage.classList.add('hidden');
@@ -242,7 +237,7 @@
                 window.opener.postMessage(decodedText, '*');
                 // You might choose to close the window here if it's strictly a pop-up,
                 // but for general mobile use, keeping it open for "scan again" is better.
-                window.close();
+                // window.close();
             }
         }
 
