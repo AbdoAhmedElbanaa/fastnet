@@ -4,257 +4,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح QR متجاوب</title>
-    <!-- Tailwind CSS CDN for responsive design and modern styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html5-qrcode library -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <title>ماسح QR</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
     <style>
-        /* Custom styles for better appearance and overrides if needed */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            font-family: sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
             margin: 0;
-            padding: 1rem;
-            box-sizing: border-box;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         #reader {
             width: 100%;
-            max-width: 400px; /* Limit reader width on larger screens */
-            border-radius: 0.75rem; /* rounded-lg */
-            overflow: hidden; /* Ensure content respects border-radius */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: black;
         }
 
-        #result-container {
-            background-color: #ffffff;
-            border-radius: 0.75rem; /* rounded-lg */
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
-            text-align: center;
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #333;
+            word-wrap: break-word;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: none;
         }
 
-        #camera-permission-message {
-            background-color: #fee2e2; /* red-100 */
-            color: #ef4444; /* red-500 */
-            padding: 1rem;
-            border-radius: 0.5rem; /* rounded-md */
-            margin-bottom: 1rem;
-            text-align: center;
-            width: 100%;
-            max-width: 400px;
+        .error-message {
+            background: #ffcccc;
+            color: #cc0000;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
 
-        .button-primary {
-            background-color: #2563eb; /* blue-600 */
-            color: #ffffff;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600; /* font-semibold */
-            transition: background-color 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-
-        .button-primary:hover {
-            background-color: #1d4ed8; /* blue-700 */
+        .info-message {
+            background: #e0f7fa;
+            color: #00796b;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800">
-    <div id="camera-permission-message" class="hidden">
-        <p>
-            ⚠️ تم رفض إذن الكاميرا أو لا يمكن الوصول إليها.
-            <br>
-            الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.
-        </p>
-        <button id="retry-camera" class="mt-3 button-primary">إعادة المحاولة</button>
-    </div>
-
-    <div id="loading-message" class="text-center text-lg font-semibold text-gray-600">
-        جاري تحميل الماسح... يرجى السماح بالوصول إلى الكاميرا.
-    </div>
-
-    <div id="reader" class="hidden bg-white rounded-lg shadow-lg"></div>
-
-    <div id="result-container" class="hidden">
-        <p class="text-gray-600 text-sm mb-2">نتيجة المسح:</p>
-        <p id="result" class="text-lg font-bold text-blue-700 break-words"></p>
-        <button id="scan-again" class="mt-4 button-primary">مسح مرة أخرى</button>
+<body>
+    <div class="container">
+        <h2>ماسح QR Code</h2>
+        <div id="message" class="info-message">
+            الرجاء السماح بالوصول إلى الكاميرا
+        </div>
+        <div id="reader"></div>
+        <p>نتيجة المسح: <span id="result"></span></p>
     </div>
 
     <script>
-        let qrScanner = null;
-        const readerDiv = document.getElementById('reader');
-        const resultContainer = document.getElementById('result-container');
-        const resultSpan = document.getElementById('result');
-        const loadingMessage = document.getElementById('loading-message');
-        const cameraPermissionMessage = document.getElementById('camera-permission-message');
-        const retryCameraButton = document.getElementById('retry-camera');
-        const scanAgainButton = document.getElementById('scan-again');
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const resultElem = document.getElementById('result');
+            const messageElem = document.getElementById('message');
+            const readerElem = document.getElementById('reader');
 
-        /**
-         * @brief Displays a custom message instead of using alert().
-         * @param {string} message The message to display.
-         * @param {boolean} isError True if it's an error message, false otherwise.
-         */
-        function showMessage(message, isError = false) {
-            cameraPermissionMessage.innerHTML = `<p>${message}</p>`;
-            if (isError) {
-                cameraPermissionMessage.classList.remove('bg-green-100', 'text-green-500');
-                cameraPermissionMessage.classList.add('bg-red-100', 'text-red-500');
-                cameraPermissionMessage.innerHTML += `<button id="retry-camera-btn" class="mt-3 button-primary">إعادة المحاولة</button>`;
-                document.getElementById('retry-camera-btn').onclick = startQrScanner;
-            } else {
-                cameraPermissionMessage.classList.remove('bg-red-100', 'text-red-500');
-                cameraPermissionMessage.classList.add('bg-blue-100', 'text-blue-500');
-            }
-            cameraPermissionMessage.classList.remove('hidden');
-        }
-
-        /**
-         * @brief Hides the custom message.
-         */
-        function hideMessage() {
-            cameraPermissionMessage.classList.add('hidden');
-        }
-
-        /**
-         * @brief Initializes and starts the QR code scanner.
-         */
-        async function startQrScanner() {
-            loadingMessage.classList.remove('hidden');
-            readerDiv.classList.add('hidden');
-            resultContainer.classList.add('hidden');
-            hideMessage();
-
-            // Stop any existing scanner instances
-            if (qrScanner && qrScanner.is ) { // Check if qrScanner is initialized and running
-                try {
-                    await qrScanner.stop();
-                    qrScanner.clear();
-                } catch (err) {
-                    console.warn("خطأ أثناء إيقاف الماسح:", err);
-                }
-            }
-
-            try {
-                // First, request camera permission to ensure we can enumerate devices
-                // If permission is already granted, this will resolve immediately without a prompt.
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                // Stop the temporary stream immediately after getting permission
-                stream.getTracks().forEach(track => track.stop());
-
-                // Enumerate cameras to find the environment camera
-                const cameras = await Html5Qrcode.getCameras();
-                let environmentCameraId = null;
-
-                // Prioritize finding an 'environment' camera based on common labels
-                for (const camera of cameras) {
-                    if (camera.label.toLowerCase().includes('back') || camera.label.toLowerCase().includes('environment')) {
-                        environmentCameraId = camera.id;
-                        break; // Found a suitable back camera, use it
-                    }
-                }
-
-                // Fallback: If no specific 'environment' camera is identified by label,
-                // try to find one that is not explicitly 'front' or 'user' facing.
-                if (!environmentCameraId && cameras.length > 0) {
-                    const nonFrontCameras = cameras.filter(camera => !camera.label.toLowerCase().includes('front') && !camera.label.toLowerCase().includes('user'));
-                    if (nonFrontCameras.length > 0) {
-                        environmentCameraId = nonFrontCameras[0].id;
-                    } else {
-                        // If all cameras are labeled 'front' or 'user', just pick the first one
-                        environmentCameraId = cameras[0].id;
-                    }
-                }
-
-                if (!environmentCameraId) {
-                    throw new Error("لم يتم العثور على كاميرا خلفية أو أي كاميرا متاحة.");
-                }
-
-                loadingMessage.classList.add('hidden');
-                readerDiv.classList.remove('hidden');
-
-                // Initialize Html5QrcodeScanner
-                qrScanner = new Html5QrcodeScanner("reader", {
+            // وظيفة بدء الماسح
+            function startScanner() {
+                const config = {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    videoConstraints: {
-                        facingMode: "environment", // Keep this as a strong hint for the browser
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                    qrbox: {
+                        width: 250,
+                        height: 250
                     },
-                    rememberLastUsedCamera: true
-                }, /* verbose= */ false);
+                    videoConstraints: {
+                        facingMode: "environment"
+                    }
+                };
 
-                // Render the scanner with the selected camera ID directly
-                qrScanner.render(environmentCameraId, onScanSuccess, onScanFailure);
+                const html5QrcodeScanner = new Html5QrcodeScanner("reader", config, /* verbose= */ false);
 
-            } catch (error) {
-                loadingMessage.classList.add('hidden');
-                console.error("خطأ في إذن الكاميرا أو الوصول إليها:", error);
-                let errorMessage = "تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.";
-                if (error.message.includes("not found")) {
-                    errorMessage = "لم يتم العثور على كاميرا متاحة. يرجى التأكد من توصيل الكاميرا ومنح الإذن.";
+                function onScanSuccess(decodedText, decodedResult) {
+                    console.log(`Scan result: ${decodedText}`, decodedResult);
+                    resultElem.innerText = decodedText;
+                    resultElem.style.display = 'block';
+                    messageElem.style.display = 'none';
+
+                    // إغلاق الماسح بعد النجاح
+                    html5QrcodeScanner.clear();
+
+                    // إرسال البيانات إلى الصفحة الأصلية إذا كانت موجودة
+                    if (window.opener) {
+                        window.opener.postMessage(decodedText, '*');
+                        window.close();
+                    }
                 }
-                showMessage(errorMessage, true);
-            }
-        }
 
-        /**
-         * @brief Callback function for successful QR code scan.
-         * @param {string} decodedText The decoded text from the QR code.
-         * @param {Object} decodedResult The full decoded result object.
-         */
-        async function onScanSuccess(decodedText, decodedResult) {
-            // Stop the scanner after a successful scan
-            if (qrScanner) {
-                try {
-                    await qrScanner.stop();
-                    qrScanner.clear(); // Clear the reader element
-                } catch (err) {
-                    console.warn("خطأ أثناء إيقاف الماسح بعد النجاح:", err);
+                function onScanFailure(error) {
+                    console.warn(`QR Code scan error: ${error}`);
                 }
+
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
             }
 
-            readerDiv.classList.add('hidden');
-            resultContainer.classList.remove('hidden');
-            resultSpan.innerText = decodedText;
-
-            // Send the result to the opener window if it exists (for pop-up scenarios)
-            if (window.opener) {
-                window.opener.postMessage(decodedText, '*');
-                // You might choose to close the window here if it's strictly a pop-up,
-                // but for general mobile use, keeping it open for "scan again" is better.
-                // window.close();
-            }
-        }
-
-        /**
-         * @brief Callback function for QR code scan failure.
-         * @param {string} error The error message.
-         */
-        function onScanFailure(error) {
-            // This function is called continuously if no QR code is detected or if there's a minor error.
-            // Avoid showing alerts here. Log to console for debugging.
-            console.warn("خطأ في المسح:", error);
-        }
-
-        // Event Listeners
-        window.onload = startQrScanner; // Start scanner when the page loads
-        retryCameraButton.onclick = startQrScanner; // Retry button for camera permission
-        scanAgainButton.onclick = startQrScanner; // Scan again button
+            // طلب إذن الكاميرا عند تحميل الصفحة
+            navigator.mediaDevices.getUserMedia({
+                    video: true
+                })
+                .then(function(stream) {
+                    // تم منح الإذن
+                    messageElem.innerText = "تم منح الإذن. جاري بدء الماسح...";
+                    messageElem.classList.remove('error-message');
+                    messageElem.classList.add('info-message');
+                    startScanner();
+                })
+                .catch(function(err) {
+                    // تم رفض الإذن
+                    console.error("خطأ في إذن الكاميرا:", err);
+                    messageElem.innerText = "تم رفض إذن الكاميرا. يرجى التأكد من السماح بالوصول إليها من إعدادات التطبيق أو المتصفح.";
+                    messageElem.classList.remove('info-message');
+                    messageElem.classList.add('error-message');
+                });
+        });
     </script>
 </body>
 
