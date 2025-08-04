@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح QR متجاوب</title>
+    <!-- Tailwind CSS CDN for responsive design and modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        /* Custom styles for better appearance and overrides if needed */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 400px; /* Limit reader width on larger screens */
+            border-radius: 0.75rem; /* rounded-lg */
+            overflow: hidden; /* Ensure content respects border-radius */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+        }
+
+        #result-container {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-lg */
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            text-align: center;
+        }
+
+        #camera-permission-message {
+            background-color: #fee2e2; /* red-100 */
+            color: #ef4444; /* red-500 */
+            padding: 1rem;
+            border-radius: 0.5rem; /* rounded-md */
+            margin-bottom: 1rem;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .button-primary {
+            background-color: #2563eb; /* blue-600 */
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600; /* font-semibold */
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .button-primary:hover {
+            background-color: #1d4ed8; /* blue-700 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+    <div id="camera-permission-message" class="hidden">
+        <p>
+            ⚠️ تم رفض إذن الكاميرا أو لا يمكن الوصول إليها.
+            <br>
+            الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.
+        </p>
+        <button id="retry-camera" class="mt-3 button-primary">إعادة المحاولة</button>
+    </div>
+
+    <div id="loading-message" class="text-center text-lg font-semibold text-gray-600">
+        جاري تحميل الماسح... يرجى السماح بالوصول إلى الكاميرا.
+    </div>
+
+    <div id="reader" class="hidden bg-white rounded-lg shadow-lg"></div>
+
+    <div id="result-container" class="hidden">
+        <p class="text-gray-600 text-sm mb-2">نتيجة المسح:</p>
+        <p id="result" class="text-lg font-bold text-blue-700 break-words"></p>
+        <button id="scan-again" class="mt-4 button-primary">مسح مرة أخرى</button>
+    </div>
+
+    <script>
+        let qrScanner = null;
+        const readerDiv = document.getElementById('reader');
+        const resultContainer = document.getElementById('result-container');
+        const resultSpan = document.getElementById('result');
+        const loadingMessage = document.getElementById('loading-message');
+        const cameraPermissionMessage = document.getElementById('camera-permission-message');
+        const retryCameraButton = document.getElementById('retry-camera');
+        const scanAgainButton = document.getElementById('scan-again');
+
+        /**
+         * @brief Displays a custom message instead of using alert().
+         * @param {string} message The message to display.
+         * @param {boolean} isError True if it's an error message, false otherwise.
+         */
+        function showMessage(message, isError = false) {
+            cameraPermissionMessage.innerHTML = `<p>${message}</p>`;
+            if (isError) {
+                cameraPermissionMessage.classList.remove('bg-green-100', 'text-green-500');
+                cameraPermissionMessage.classList.add('bg-red-100', 'text-red-500');
+                cameraPermissionMessage.innerHTML += `<button id="retry-camera-btn" class="mt-3 button-primary">إعادة المحاولة</button>`;
+                document.getElementById('retry-camera-btn').onclick = startQrScanner;
+            } else {
+                cameraPermissionMessage.classList.remove('bg-red-100', 'text-red-500');
+                cameraPermissionMessage.classList.add('bg-blue-100', 'text-blue-500');
+            }
+            cameraPermissionMessage.classList.remove('hidden');
+        }
+
+        /**
+         * @brief Hides the custom message.
+         */
+        function hideMessage() {
+            cameraPermissionMessage.classList.add('hidden');
+        }
+
+        /**
+         * @brief Initializes and starts the QR code scanner.
+         */
+        async function startQrScanner() {
+            loadingMessage.classList.remove('hidden');
+            readerDiv.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            hideMessage();
+
+            // Stop any existing scanner instances
+            if (qrScanner && qrScanner.is  && qrScanner.is ) { // Check if qrScanner is initialized and running
+                try {
+                    await qrScanner.stop();
+                    qrScanner.clear();
+                } catch (err) {
+                    console.warn("خطأ أثناء إيقاف الماسح:", err);
+                }
+            }
+
+            // Attempt to get camera access
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // If permission is granted, stop the temporary camera stream to avoid conflicts
+                stream.getTracks().forEach(track => track.stop());
+
+                loadingMessage.classList.add('hidden');
+                readerDiv.classList.remove('hidden');
+
+                qrScanner = new Html5QrcodeScanner("reader", {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    // Use 'environment' for back camera, 'user' for front camera
+                    videoConstraints: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 }, // Ideal resolution for better scanning
+                        height: { ideal: 720 }
+                    },
+                    rememberLastUsedCamera: true // Remember user's camera choice
+                }, /* verbose= */ false); // Set verbose to false for cleaner console
+
+                qrScanner.render(onScanSuccess, onScanFailure);
+
+            } catch (error) {
+                loadingMessage.classList.add('hidden');
+                console.error("خطأ في إذن الكاميرا:", error);
+                showMessage(
+                    "تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح أو فتح هذه الصفحة في نافذة متصفح جديدة.",
+                    true
+                );
+            }
+        }
+
+        /**
+         * @brief Callback function for successful QR code scan.
+         * @param {string} decodedText The decoded text from the QR code.
+         * @param {Object} decodedResult The full decoded result object.
+         */
+        async function onScanSuccess(decodedText, decodedResult) {
+            // Stop the scanner after a successful scan
+            if (qrScanner) {
+                try {
+                    await qrScanner.stop();
+                    qrScanner.clear(); // Clear the reader element
+                } catch (err) {
+                    console.warn("خطأ أثناء إيقاف الماسح بعد النجاح:", err);
+                }
+            }
+
+            readerDiv.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+            resultSpan.innerText = decodedText;
+
+            // Send the result to the opener window if it exists (for pop-up scenarios)
+            if (window.opener) {
+                window.opener.postMessage(decodedText, '*');
+                // You might choose to close the window here if it's strictly a pop-up,
+                // but for general mobile use, keeping it open for "scan again" is better.
+                window.close();
+            }
+        }
+
+        /**
+         * @brief Callback function for QR code scan failure.
+         * @param {string} error The error message.
+         */
+        function onScanFailure(error) {
+            // This function is called continuously if no QR code is detected or if there's a minor error.
+            // Avoid showing alerts here. Log to console for debugging.
+            console.warn("خطأ في المسح:", error);
+        }
+
+        // Event Listeners
+        window.onload = startQrScanner; // Start scanner when the page loads
+        retryCameraButton.onclick = startQrScanner; // Retry button for camera permission
+        scanAgainButton.onclick = startQrScanner; // Scan again button
+    </script>
+</body>
+
+</html>
